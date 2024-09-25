@@ -71,7 +71,7 @@ To list your recent chats and obtain their IDs:
 ### Message Format
 
 - **Single-Line Messages**: Write your message on a single line.
-- **Multiline Messages**: Enclose your message or caption within double quotes (`\"`).
+- **Multiline Messages**: Enclose your message or caption within double quotes (`"`).
 - **Message Types**:
   - **text** (default)
   - **markdown**
@@ -100,30 +100,30 @@ To list your recent chats and obtain their IDs:
 - **Multiline Text Message**:
 
   ```
-  \"This is
+  "This is
   a multiline
-  text message.\"
+  text message."
   ```
 
 - **Markdown Message**:
 
   ```
-  markdown:\"This is **bold** and _italic_ text.\"
+  markdown:"This is **bold** and _italic_ text."
   ```
 
 - **Photo with Caption**:
 
   ```
-  photo:/path/to/photo.jpg:\"This is a
+  photo:/path/to/photo.jpg:"This is a
   multiline caption
-  for the photo.\"
+  for the photo."
   ```
 
 - **Video with Caption**:
 
   ```
-  video:/path/to/video.mp4:\"Check out this
-  awesome video!\"
+  video:/path/to/video.mp4:"Check out this
+  awesome video!"
   ```
 
 ### Sending Messages
@@ -134,12 +134,12 @@ Create a `messages.txt` file:
 
 ```
 Hello, this is a single-line message.
-\"This is
-a multiline message.\"
-markdown:\"This is **bold** and _italic_ text.\"
-photo:/path/to/photo.jpg:\"This is a
+"This is
+a multiline message."
+markdown:"This is **bold** and _italic_ text."
+photo:/path/to/photo.jpg:"This is a
 multiline caption
-for the photo.\"
+for the photo."
 ```
 
 Send messages using:
@@ -153,12 +153,12 @@ Send messages using:
 ```bash
 cat <<EOF | ./telesender --api-id YOUR_API_ID --api-hash YOUR_API_HASH --chat-id TARGET_CHAT_ID
 Hello, this is a single-line message.
-\"This is
-a multiline message.\"
-markdown:\"This is **bold** and _italic_ text.\"
-photo:/path/to/photo.jpg:\"This is a
+"This is
+a multiline message."
+markdown:"This is **bold** and _italic_ text."
+photo:/path/to/photo.jpg:"This is a
 multiline caption
-for the photo.\"
+for the photo."
 EOF
 ```
 
@@ -167,27 +167,27 @@ EOF
 **Sending a Single-Line Text Message**:
 
 ```bash
-echo \"Hello, World!\" | ./telesender --api-id YOUR_API_ID --api-hash YOUR_API_HASH --chat-id CHAT_ID
+echo "Hello, World!" | ./telesender --api-id YOUR_API_ID --api-hash YOUR_API_HASH --chat-id CHAT_ID
 ```
 
 **Sending a Multiline Text Message**:
 
 ```bash
-echo '\"This is a
-multiline message.\"' | ./telesender --api-id YOUR_API_ID --api-hash YOUR_API_HASH --chat-id CHAT_ID
+echo '"This is a
+multiline message."' | ./telesender --api-id YOUR_API_ID --api-hash YOUR_API_HASH --chat-id CHAT_ID
 ```
 
 **Sending a Markdown Message**:
 
 ```bash
-echo 'markdown:\"This is **bold** and _italic_.\"' | ./telesender --api-id YOUR_API_ID --api-hash YOUR_API_HASH --chat-id CHAT_ID
+echo 'markdown:"This is **bold** and _italic_."' | ./telesender --api-id YOUR_API_ID --api-hash YOUR_API_HASH --chat-id CHAT_ID
 ```
 
 **Sending a Photo with Caption**:
 
 ```bash
-echo 'photo:/path/to/photo.jpg:\"This is a
-multiline caption.\"' | ./telesender --api-id YOUR_API_ID --api-hash YOUR_API_HASH --chat-id CHAT_ID
+echo 'photo:/path/to/photo.jpg:"This is a
+multiline caption."' | ./telesender --api-id YOUR_API_ID --api-hash YOUR_API_HASH --chat-id CHAT_ID
 ```
 
 ### Error Handling
