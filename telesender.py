@@ -87,15 +87,13 @@ def main():
     parser.add_argument('--list-chats', action='store_true', help='List recent chats')
     args = parser.parse_args()
 
-    client = TelegramClient('telegram_cli_session', int(args.api_id), args.api_hash)
-
     async def run():
-        await client.start()
-        if args.list_chats:
-            await list_chats(client)
-        else:
-            await send_messages(client, args)
-        await client.disconnect()
+        # Use the client as an asynchronous context manager
+        async with TelegramClient('telegram_cli_session', int(args.api_id), args.api_hash) as client:
+            if args.list_chats:
+                await list_chats(client)
+            else:
+                await send_messages(client, args)
 
     try:
         asyncio.run(run())
@@ -111,5 +109,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-
 
