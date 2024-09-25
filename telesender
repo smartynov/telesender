@@ -33,14 +33,29 @@ async def send_messages(client, args):
             line = line.rstrip('\n')
             if in_multiline:
                 buffer += '\n' + line
-                if line.endswith('"'):
+                if line.endswith('"') and not line.endswith('\\"'):
                     in_multiline = False
                     yield buffer
                     buffer = ''
             else:
-                if line.startswith('"'):
+                if line.strip() == '':
+                    continue  # Skip empty lines
+                if ':' in line:
+                    # Check if content starts with a quote
+                    colon_index = line.find(':')
+                    remainder = line[colon_index+1:].strip()
+                    if remainder.startswith('"'):
+                        buffer = line
+                        if remainder.endswith('"') and not remainder.endswith('\\"'):
+                            yield buffer
+                            buffer = ''
+                        else:
+                            in_multiline = True
+                    else:
+                        yield line
+                elif line.startswith('"'):
                     buffer = line
-                    if line.endswith('"') and len(line) > 1:
+                    if line.endswith('"') and not line.endswith('\\"'):
                         yield buffer
                         buffer = ''
                     else:
@@ -92,13 +107,16 @@ async def send_message(client, entity, message_line):
     if content.startswith('"') and content.endswith('"') and len(content) >= 2:
         content = content[1:-1]  # Remove the surrounding quotes
     elif content.startswith('"'):
-        content = content[1:]  # Remove the opening quote if not closed in the same line
+        content = content[1:]  # Remove the opening quote
     elif content.endswith('"'):
-        content = content[:-1]  # Remove the closing quote if not opened in the same line
+        content = content[:-1]  # Remove the closing quote
+
+    # Unescape any escaped quotes
+    content = content.replace('\\"', '"')
 
     # Process the message
     if msg_type == 'text':
-        await client.send_message(entity, content)
+        await client.send_message(entity, content, parse_mode=None)
     elif msg_type == 'markdown':
         await client.send_message(entity, content, parse_mode='markdown')
     elif msg_type == 'photo':
