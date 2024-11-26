@@ -29,7 +29,7 @@ pip install telethon
 Clone the repository:
 
 ```bash
-git clone https://github.com/your_github_username/telesender.git
+git clone https://github.com/smartynov/telesender.git
 cd telesender
 ```
 
