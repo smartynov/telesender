@@ -4,6 +4,9 @@ import sys
 import argparse
 import asyncio
 from telethon import TelegramClient, errors
+import os
+import tempfile
+import subprocess
 
 def message_generator():
     buffer = ''
@@ -98,16 +101,27 @@ async def send_message(client, entity, message_line):
 
     # Process the message
     try:
-        if msg_type == 'text':
-            await client.send_message(entity, content, parse_mode=None)
-        elif msg_type == 'markdown':
-            await client.send_message(entity, content, parse_mode='markdown')
+        if msg_type == 'video':
+            caption = content if content else None
+            # Generate thumbnail
+            thumb_path = generate_thumbnail(file_path)
+            await client.send_file(
+                entity,
+                file_path,
+                caption=caption,
+                supports_streaming=True,
+                thumb=thumb_path
+            )
+            # Clean up the thumbnail file
+            if thumb_path and os.path.exists(thumb_path):
+                os.remove(thumb_path)
         elif msg_type == 'photo':
             caption = content if content else None
             await client.send_file(entity, file_path, caption=caption)
-        elif msg_type == 'video':
-            caption = content if content else None
-            await client.send_file(entity, file_path, caption=caption, supports_streaming=True)
+        elif msg_type == 'text':
+            await client.send_message(entity, content, parse_mode=None)
+        elif msg_type == 'markdown':
+            await client.send_message(entity, content, parse_mode='markdown')
         elif msg_type == 'file':
             caption = content if content else None
             await client.send_file(entity, file_path, caption=caption)
@@ -115,6 +129,27 @@ async def send_message(client, entity, message_line):
             print(f"Unknown message type: {msg_type}", file=sys.stderr)
     except Exception as e:
         print(f"Failed to send message: {e}", file=sys.stderr)
+
+def generate_thumbnail(video_path):
+    try:
+        # Use a temporary file for the thumbnail
+        thumb_fd, thumb_path = tempfile.mkstemp(suffix='.jpg')
+        os.close(thumb_fd)
+        # Generate thumbnail using ffmpeg
+        cmd = [
+            'ffmpeg',
+            '-i', video_path,
+            '-ss', '00:00:01.000',
+            '-vframes', '1',
+            '-q:v', '2',
+            '-vf', 'scale=320:-1',
+            thumb_path
+        ]
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+        return thumb_path
+    except Exception as e:
+        print(f"Failed to generate thumbnail: {e}", file=sys.stderr)
+        return None
 
 async def list_chats(client):
     async for dialog in client.iter_dialogs():
