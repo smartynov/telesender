@@ -177,7 +177,7 @@ def generate_thumbnail(video_path):
             'ffmpeg',
             '-y',
             '-i', video_path,
-            '-vf', 'thumbnail,scale=320:-1',
+            '-vf', 'thumbnail=1337,scale=320:-1',
             '-frames:v', '1',
             thumb_path
         ]
