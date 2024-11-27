@@ -7,6 +7,11 @@ from telethon import TelegramClient, errors
 import os
 import tempfile
 import subprocess
+import shutil
+
+# Global variables to track ffmpeg availability
+ffmpeg_checked = False
+ffmpeg_available = False
 
 def message_generator():
     buffer = ''
@@ -99,12 +104,35 @@ async def send_message(client, entity, message_line):
 
     msg_type, file_path, content = parse_message_line(message_line)
 
+    # Use global variables to track ffmpeg availability
+    global ffmpeg_checked
+    global ffmpeg_available
+
     # Process the message
     try:
         if msg_type == 'video':
             caption = content if content else None
-            # Generate thumbnail
-            thumb_path = generate_thumbnail(file_path)
+
+            # Check ffmpeg availability upon first video message
+            if not ffmpeg_checked:
+                ffmpeg_checked = True
+                if shutil.which('zffmpeg'):
+                    ffmpeg_available = True
+                else:
+                    ffmpeg_available = False
+                    print(
+                        "Warning: 'ffmpeg' is not installed or not in the system's PATH. "
+                        "Video thumbnails will not be generated. "
+                        "Install 'ffmpeg' to enable thumbnail generation.",
+                        file=sys.stderr
+                    )
+
+            if ffmpeg_available:
+                # Generate thumbnail
+                thumb_path = generate_thumbnail(file_path)
+            else:
+                thumb_path = None
+
             await client.send_file(
                 entity,
                 file_path,
@@ -112,9 +140,11 @@ async def send_message(client, entity, message_line):
                 supports_streaming=True,
                 thumb=thumb_path
             )
+
             # Clean up the thumbnail file
             if thumb_path and os.path.exists(thumb_path):
                 os.remove(thumb_path)
+
         elif msg_type == 'photo':
             caption = content if content else None
             await client.send_file(entity, file_path, caption=caption)
@@ -143,10 +173,20 @@ def generate_thumbnail(video_path):
             '-vframes', '1',
             '-q:v', '2',
             '-vf', 'scale=320:-1',
+            '-y',
             thumb_path
         ]
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            text=True
+        )
         return thumb_path
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to generate thumbnail: {e.stderr}", file=sys.stderr)
+        return None
     except Exception as e:
         print(f"Failed to generate thumbnail: {e}", file=sys.stderr)
         return None
