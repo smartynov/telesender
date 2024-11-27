@@ -8,6 +8,7 @@ import os
 import tempfile
 import subprocess
 import shutil
+import json
 
 # Global variables to track ffmpeg availability
 ffmpeg_checked = False
@@ -116,29 +117,33 @@ async def send_message(client, entity, message_line):
             # Check ffmpeg availability upon first video message
             if not ffmpeg_checked:
                 ffmpeg_checked = True
-                if shutil.which('zffmpeg'):
+                if shutil.which('ffmpeg'):
                     ffmpeg_available = True
                 else:
                     ffmpeg_available = False
                     print(
                         "Warning: 'ffmpeg' is not installed or not in the system's PATH. "
-                        "Video thumbnails will not be generated. "
-                        "Install 'ffmpeg' to enable thumbnail generation.",
+                        "Video thumbnails and metadata will not be generated. "
+                        "Install 'ffmpeg' to enable better image handling.",
                         file=sys.stderr
                     )
+
+            thumb_path = None
+            attributes = None
 
             if ffmpeg_available:
                 # Generate thumbnail
                 thumb_path = generate_thumbnail(file_path)
-            else:
-                thumb_path = None
+                # Get video attributes
+                attributes = get_video_attributes(file_path)
 
             await client.send_file(
                 entity,
                 file_path,
                 caption=caption,
                 supports_streaming=True,
-                thumb=thumb_path
+                thumb=thumb_path,
+                attributes=attributes
             )
 
             # Clean up the thumbnail file
@@ -165,15 +170,15 @@ def generate_thumbnail(video_path):
         # Use a temporary file for the thumbnail
         thumb_fd, thumb_path = tempfile.mkstemp(suffix='.jpg')
         os.close(thumb_fd)
-        # Generate thumbnail using ffmpeg
+        os.unlink(thumb_path)  # Remove the empty file created by mkstemp
+
+        # Generate thumbnail using ffmpeg with -y to overwrite
         cmd = [
             'ffmpeg',
-            '-i', video_path,
-            '-ss', '00:00:01.000',
-            '-vframes', '1',
-            '-q:v', '2',
-            '-vf', 'scale=320:-1',
             '-y',
+            '-i', video_path,
+            '-vf', 'thumbnail,scale=320:-1',
+            '-frames:v', '1',
             thumb_path
         ]
         result = subprocess.run(
@@ -189,6 +194,46 @@ def generate_thumbnail(video_path):
         return None
     except Exception as e:
         print(f"Failed to generate thumbnail: {e}", file=sys.stderr)
+        return None
+
+def get_video_attributes(video_path):
+    try:
+        # Use ffprobe to get video metadata
+        cmd = [
+            'ffprobe',
+            '-v', 'error',
+            '-select_streams', 'v:0',
+            '-show_entries', 'stream=width,height,duration,rotation',
+            '-of', 'json',
+            video_path
+        ]
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            text=True
+        )
+        metadata = json.loads(result.stdout)
+        stream = metadata['streams'][0]
+        width = stream.get('width', 0)
+        height = stream.get('height', 0)
+        duration = float(stream.get('duration', 0))
+        rotation = int(stream.get('tags', {}).get('rotate', 0))
+
+        # Prepare attributes for Telethon
+        from telethon.tl.types import DocumentAttributeVideo
+        attributes = [
+            DocumentAttributeVideo(
+                duration=int(duration),
+                w=width,
+                h=height,
+                supports_streaming=True
+            )
+        ]
+        return attributes
+    except Exception as e:
+        print(f"Failed to get video attributes: {e}", file=sys.stderr)
         return None
 
 async def list_chats(client):
